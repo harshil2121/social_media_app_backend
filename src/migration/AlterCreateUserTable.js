@@ -13,7 +13,8 @@ class AlterCreateUserTable {
         const [alter, fields_alter] = await connectPool.query(
           `ALTER TABLE users
           ADD COLUMN status BOOLEAN NOT NULL DEFAULT TRUE AFTER username,
-          ADD COLUMN is_delete BOOLEAN NOT NULL DEFAULT FALSE AFTER status;
+          ADD COLUMN is_delete BOOLEAN NOT NULL DEFAULT FALSE AFTER status,
+          MODIFY COLUMN logo varchar(255)
           `
         );
 

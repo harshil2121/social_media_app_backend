@@ -3,14 +3,16 @@ const express = require("express");
 const router = express.Router();
 const userController = require("../controllers/userController");
 const { upload } = require("../middleware/multer");
+const auth = require("../middleware/auth");
 
-// Register route
 router.post("/register", upload.single("logo"), userController.register);
-
-// Login route
 router.post("/login", userController.login);
-
-// Forgot password route
+router.get("/logout", auth, userController.logout);
 // router.post("/forgot-password", userController.forgotPassword);
+router.post("/change-password", auth, userController.changePassword);
+router.get("/check", auth, userController.check);
+router.put("/edit/:id", auth, upload.single("logo"), userController.editUser);
+router.get("/get/:id", auth, userController.getUserDetails);
+router.post("/getAlluser", auth, userController.getAllUserDeta);
 
 module.exports = router;

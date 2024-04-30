@@ -11,12 +11,16 @@ app.use(bodyParser.json());
 app.use(cors());
 
 // Routes Paths
-const UserRoutes = require("./src/routes/userRoutes");
 const MigrationRoutes = require("./src/routes/migrationRoutes");
+const UserRoutes = require("./src/routes/userRoutes");
+const PostRoutes = require("./src/routes/postRoutes");
+const FollowRoutes = require("./src/routes/followRoutes");
 
 // Routes
-app.use("/api/users", UserRoutes);
 app.use("/api", MigrationRoutes);
+app.use("/api/users", UserRoutes);
+app.use("/api/post", PostRoutes);
+app.use("/api/follow", FollowRoutes);
 
 app.use("/uploads", express.static(__dirname.replace("/src", "") + "/uploads"));
 

@@ -46,7 +46,7 @@ class CreateUserAndTokenTable {
         // );
 
         const [create_token, fields_create_token] = await connectPool.query(
-          `CREATE TABLE users_token (
+          `CREATE TABLE IF NOT EXISTS users_token (
                         id int NOT NULL AUTO_INCREMENT PRIMARY KEY,
                         user_id int DEFAULT NULL,
                         token varchar(255) DEFAULT NULL,

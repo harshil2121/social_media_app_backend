@@ -1,33 +1,28 @@
 const multer = require("multer");
-var fs = require("fs");
+const fs = require("fs");
 
 const multerStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    if (
-      file.fieldname === "logo" ||
-      file.fieldname === "customer_files" ||
-      file.fieldname === "customer_images" ||
-      file.fieldname === "customer_docs" ||
-      file.fieldname === "verification_doc_front" ||
-      file.fieldname === "verification_doc_back" ||
-      file.fieldname === "bank_account_ownership_verification"
-    ) {
-      if (!fs.existsSync(process.env.UPLOAD_DIR)) {
-        fs.mkdirSync(process.env.UPLOAD_DIR);
+    if (file.fieldname === "logo") {
+      console.log("cvcvcvc", file);
+      const uploadDir = `${process.env.UPLOAD_DIR}`;
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
       }
-      cb(null, `./${process.env.UPLOAD_DIR}`);
+      cb(null, uploadDir);
+    } else if (file.fieldname === "postimg") {
+      const uploadPostDir = `${process.env.UPLOAD_POST_DIR}`;
+      if (!fs.existsSync(uploadPostDir)) {
+        fs.mkdirSync(uploadPostDir, { recursive: true });
+      }
+      cb(null, uploadPostDir);
     } else {
-      let path = "";
-      return path;
+      cb(new Error("Invalid fieldname"));
     }
   },
-
   filename: (req, file, cb) => {
-    let fileExt = file.originalname.split(".").pop();
-    cb(
-      null,
-      Date.now() + "_" + `${file.fieldname}.${fileExt}`.split(" ").join("_")
-    );
+    const fileExt = file.originalname.split(".").pop();
+    cb(null, `${Date.now()}-${file.originalname}`);
   },
 });
 
@@ -44,58 +39,17 @@ exports.upload = multer({
       } else {
         return cb(null, false);
       }
-    }
-
-    if (file.fieldname === "customer_images") {
+    } else if (file.fieldname === "postimg") {
       if (
-        file.mimetype == "image/png" ||
-        file.mimetype == "image/jpg" ||
-        file.mimetype == "image/jpeg" ||
-        file.mimetype == "image/gif" ||
-        file.mimetype == "image/webp"
+        file.mimetype.startsWith("image/") ||
+        file.mimetype.startsWith("video/")
       ) {
         cb(null, true);
       } else {
-        return cb(null, false);
+        cb(new Error("Invalid file type"));
       }
-    }
-
-    if (file.fieldname === "customer_files") {
-      if (
-        file.mimetype == "application/pdf" ||
-        file.mimetype == "application/msword" ||
-        file.mimetype ==
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
-        file.mimetype == "text/csv"
-      ) {
-        cb(null, true);
-      } else {
-        return cb(null, false);
-      }
-    }
-
-    if (
-      file.fieldname === "customer_docs" ||
-      file.fieldname === "verification_doc_front" ||
-      file.fieldname === "verification_doc_back" ||
-      file.fieldname === "bank_account_ownership_verification"
-    ) {
-      if (
-        file.mimetype == "application/pdf" ||
-        file.mimetype == "application/msword" ||
-        file.mimetype ==
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
-        file.mimetype == "text/csv" ||
-        file.mimetype == "image/png" ||
-        file.mimetype == "image/jpg" ||
-        file.mimetype == "image/jpeg" ||
-        file.mimetype == "image/gif" ||
-        file.mimetype == "image/webp"
-      ) {
-        cb(null, true);
-      } else {
-        return cb(null, false);
-      }
+    } else {
+      cb(new Error("Invalid fieldname"));
     }
   },
 });

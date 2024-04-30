@@ -2,12 +2,12 @@ module.exports.SUCCESS = "Success";
 module.exports.SOMETHING_WRONG = "Something Went Wrong";
 module.exports.EMAIL_EXISTS = "Email id already exists";
 module.exports.PHONE_EXISTS = "Phone number already exists";
-module.exports.REGISTRATION_SUCCESS = "You have been registered successfully.";
-module.exports.LOGIN_SUCCESS = "Logged in Successfully";
 module.exports.LOGIN_FAIL = "Plese login again";
+module.exports.REGISTRATION_SUCCESS = "You have been registered successfully.";
+module.exports.POST_SUCCESS = "Your post been created successfully.";
+module.exports.POST_UPDATE = "Your post has been updated successfully";
+module.exports.LOGIN_SUCCESS = "Logged in Successfully";
 module.exports.LOGOUT_SUCCESS = "You have been logout successfully";
-module.exports.EMAIL_SENT =
-  "Password Reset Link has been sent to your registered email";
 module.exports.RESET_PASSWORD = "Password has been reset successfully";
 module.exports.EDIT_PROFILE = "Your profile has been updated successfully";
 module.exports.ADD_ADDRESS = "Your address has been updated successfully";

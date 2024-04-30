@@ -1,7 +1,6 @@
 const bcriptjs = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const { getCurrentTime } = require("../common/helper");
-// const RunUserMigration = require("../migrations/RunUserMigration");
+const { getCurrentTime, unlinkFiles } = require("../common/helper");
 
 class userModal {
   constructor() {}
@@ -21,15 +20,12 @@ class userModal {
           (await input.phone.length) === 9 ? "0" + input.phone : input.phone;
 
         let data = {
-          username: input.username.trim(),
-          email: input.email.trim(),
-          phone: number.trim(),
+          username: input.username?.trim(),
+          email: input.email?.trim(),
+          phone: number?.trim(),
           password: hashed_password,
           logo: filename,
-          address_line1: input?.address_line1.trim(),
-          state: input?.state.trim(),
-          city: input?.city.trim(),
-          postal_code: input?.postal_code.trim(),
+          status: 1,
           created_at: getCurrentTime(),
           updated_at: getCurrentTime(),
         };
@@ -66,9 +62,9 @@ class userModal {
     try {
       const [rows_user, fields] = await connectPool.query(
         "SELECT * FROM users WHERE email = ? LIMIT 1",
-        [input.email.trim()]
+        [input.email?.trim()]
       );
-      console.log(rows_user, "frfrfrf");
+
       if (
         rows_user.length > 0 &&
         rows_user[0]?.status === 1 &&
@@ -87,6 +83,7 @@ class userModal {
           {
             user_id: user.id,
             token: token,
+            created_at: getCurrentTime(),
           }
         );
         // user = await UserModel.getUserFullDetails(user.id);
@@ -103,73 +100,6 @@ class userModal {
     }
   }
 
-  // async login_as(id) {
-  //   try {
-  //     const [rows_user, fields] = await connectPool.query(
-  //       "SELECT * FROM users WHERE id = ?  AND role != 'Super Admin' LIMIT 1",
-  //       [id]
-  //     );
-  //     // console.log(rows_user);
-  //     if (
-  //       rows_user.length > 0 &&
-  //       rows_user[0]?.status === "active" &&
-  //       rows_user[0].is_delete === 0
-  //     ) {
-  //       let user = rows_user[0];
-  //       const token = await jwt.sign({ id: user.id }, "users");
-  //       const [row_token, fields] = await connectPool.query(
-  //         "INSERT INTO users_token SET ?",
-  //         {
-  //           user_id: user.id,
-  //           token: token,
-  //         }
-  //       );
-
-  //       user = await UserModel.getUserFullDetails(user.id);
-  //       user.token = token;
-  //       return user;
-  //     }
-  //     return [];
-  //   } catch (e) {
-  //     console.log(e);
-  //     throw Error(e);
-  //   }
-  // }
-
-  // async super_login(input) {
-  //   try {
-  //     const [rows_user, fields] = await connectPool.query(
-  //       "SELECT * FROM users WHERE email = ? AND role = 'Super Admin' LIMIT 1",
-  //       [input.email]
-  //     );
-
-  //     if (rows_user.length > 0) {
-  //       let user = rows_user[0];
-  //       const password = user.password;
-  //       const isMatch = await bcriptjs.compare(input.password, password);
-
-  //       if (!isMatch) {
-  //         return [];
-  //       }
-  //       const token = await jwt.sign({ id: user.id }, "users");
-  //       const [row_token, fields] = await connectPool.query(
-  //         "INSERT INTO users_token SET ?",
-  //         {
-  //           user_id: user.id,
-  //           token: token,
-  //         }
-  //       );
-
-  //       user.token = token;
-
-  //       return user;
-  //     }
-  //     return [];
-  //   } catch (e) {
-  //     console.log(e);
-  //     throw Error(e);
-  //   }
-  // }
   async logout(input) {
     try {
       const [rows_user, fields] = await connectPool.query(
@@ -186,7 +116,7 @@ class userModal {
     try {
       const [rows_user, fields] = await connectPool.query(
         `SELECT email,id,username from users WHERE email = ? LIMIT 1`,
-        [email.trim()]
+        [email?.trim()]
       );
 
       if (rows_user.length === 1) {
@@ -217,7 +147,6 @@ class userModal {
 
   async resetPassword(id, input) {
     try {
-      // console.log(id, input);
       const [rows_user, fields] = await connectPool.query(
         `SELECT id from users WHERE id = ? AND role != 'Super Admin' LIMIT 1`,
         [id]
@@ -240,231 +169,175 @@ class userModal {
     }
   }
 
-  // Fetching all the user details.
   async getUserFullDetails(id) {
     try {
       const [rows_user, fields] = await connectPool.query(
         `SELECT * from users WHERE id = ?`,
         [id]
       );
-
-      if (
-        rows_user.length > 0 &&
-        rows_user[0]?.proctivity_connected_account_id !== null
-      ) {
-        const [data_Finishsetup, fields_data_Finishsetup] =
-          await connectPool.query(
-            `SELECT a.*, b.setup_module_name FROM finishSetup_by_user AS a LEFT JOIN finishSetupDataModel AS b ON a.finish_setup_id = b.id WHERE 
-                                b.setup_module_name = 'Connect to stripe' AND a.user_id = ?`,
-            [id]
-          );
-
-        const [update_Finishsetup, fields_Finishsetup] =
-          await connectPool.query(
-            `  UPDATE finishSetup_by_user 
-                          SET 
-                          isSetupComplete = 1
-                          WHERE id = ? AND user_id = ?`,
-            [data_Finishsetup[0]?.id, id]
-          );
-      }
-
-      if (rows_user.length > 0) {
-        let user = rows_user[0];
-        user.logoPath = `${process.env.UPLOAD_DIR}/${user.logo}`;
-
-        if (user.parent === 0) {
-          if (user.id !== 1) {
-            user.package = await this.packageinfo(user.id);
-          }
-        } else {
-          let new_user = await this.getUserDetails(user.parent);
-          new_user.username = user.username;
-          new_user.email = user.email;
-          new_user.phone = user.phone;
-          new_user.role = user.role;
-          new_user.id = user.id;
-          new_user.parent = user.parent;
-          new_user.created_at = user.created_at;
-          new_user.updated_at = user.updated_at;
-          new_user.password = user.password;
-          new_user.access_key_send = user.access_key_send;
-          new_user.logoPath = `${process.env.UPLOAD_DIR}/${new_user.logo}`;
-          new_user.package = await this.packageinfo(user.parent);
-          user = new_user;
-        }
-        if (user.id !== 1) {
-          user.permissions = await this.GetUserPermissionsOnly({
-            table_prefix: user.table_prefix,
-            user_id: user.id,
-          });
-        }
-
-        const table_prefix = user.table_prefix;
-        if (table_prefix !== null) {
-          const [check_n, fields1] = await connectPool.query(
-            `SELECT * from ${table_prefix}notifications WHERE n_type = "free_trial_ended"`
-          );
-
-          if (check_n.length === 0) {
-            if (
-              user.package?.package_type === "Trial" &&
-              user.package?.expired === true
-            ) {
-              const [update_add_free_trial, field] = await connectPool.query(
-                `UPDATE users SET is_request = 0 WHERE id = ?`,
-                [user.id]
-              );
-            }
-          }
-        }
-
-        return user;
-      }
-
-      return rows_user;
+      return rows_user[0];
     } catch (e) {
       console.log(e);
       throw new Error(e);
     }
   }
 
-  // Fetching single User details by its id.
   async getUserDetails(id) {
     try {
-      const [rows_user, fields] = await connectPool.query(
-        `SELECT * from users WHERE id = ?`,
+      // Query to get user details
+      const [rows_user, fields_user] = await connectPool.query(
+        `SELECT * FROM users WHERE id = ?`,
         [id]
       );
 
-      if (rows_user.length > 0) {
-        const user = rows_user[0];
-        return user;
+      if (rows_user.length === 0) {
+        return null; // If user not found, return null
       }
-      return rows_user;
-    } catch (e) {
-      console.log(e);
-      throw new Error(e);
+
+      const user = rows_user[0];
+
+      // Query to get count of users following the current user
+      const [rows_followers_count] = await connectPool.query(
+        `SELECT COUNT(*) AS followers_count FROM follow WHERE following_id = ?`,
+        [id]
+      );
+
+      // Query to get count of users whom the current user follows
+      const [rows_following_count] = await connectPool.query(
+        `SELECT COUNT(*) AS following_count FROM follow WHERE follower_id = ?`,
+        [id]
+      );
+
+      // Query to get details of users whom the current user follows
+      const [rows_following, fields_following] = await connectPool.query(
+        `SELECT u.id, u.username, u.logo 
+        FROM users u 
+        INNER JOIN follow f ON u.id = f.following_id 
+        WHERE f.follower_id = ?`,
+        [id]
+      );
+
+      // Query to get details of users who follow the current user
+      const [rows_followers, fields_followers] = await connectPool.query(
+        `SELECT u.id, u.username, u.logo 
+        FROM users u 
+        INNER JOIN follow f ON u.id = f.follower_id 
+        WHERE f.following_id = ?`,
+        [id]
+      );
+
+      return {
+        user: user,
+        followers: {
+          count: rows_followers_count[0].followers_count,
+          users: rows_followers,
+        },
+        following: {
+          count: rows_following_count[0].following_count,
+          users: rows_following,
+        },
+      };
+    } catch (error) {
+      throw error;
     }
   }
 
-  // Update user profile by user id.
+  async getAllUserDeta(input, user_id) {
+    try {
+      const offset = (input.pageNumber - 1) * input.pageSize;
+
+      const [rows_users, fields] = await connectPool.query(
+        `SELECT u.*, 
+         CASE WHEN f.follower_id IS NOT NULL THEN 1 ELSE 0 END AS is_following
+         FROM users u
+         LEFT JOIN follow f ON u.id = f.following_id AND f.follower_id = ?
+         WHERE u.id != ?
+         LIMIT ? OFFSET ?`,
+        [user_id, user_id, input.pageSize, offset]
+      );
+
+      const [rows_count] = await connectPool.query(
+        `SELECT COUNT(*) AS total_count FROM users WHERE id != ?`,
+        [user_id]
+      );
+      const totalCount = rows_count[0].total_count;
+
+      return { users: rows_users, totalCount };
+    } catch (e) {
+      console.error("Error fetching users:", e);
+      throw new Error("Error fetching users");
+    }
+  }
+
   async editProfile(id, input, filename) {
     try {
-      const [rows_user, fields] = await connectPool.query(
-        `SELECT id,phone,logo FROM users WHERE id = ? LIMIT 1`,
+      const [rows_user, fields_user] = await connectPool.query(
+        `SELECT * FROM users WHERE id = ? LIMIT 1`,
         [id]
       );
 
       if (rows_user.length === 1) {
-        const [checkPhone, checkPhoneFields] = await connectPool.query(
-          `SELECT id, phone from users WHERE phone = ? LIMIT 1`,
-          [input.phone]
-        );
-        // if (
-        //     checkPhone.length === 0 ||
-        //     (checkPhone.length === 1 &&
-        //         checkPhone[0].id === rows_user[0].id)
-        // ) {
-        let number =
-          (await input.phone.length) === 9 ? "0" + input.phone : input.phone;
-        const [rows, fields] = await connectPool.query(
-          `UPDATE users SET 
-                          
-                          username = '${input.username}', 
-                          companyname = '${input.companyname}', 
-                          phone = '${number}', 
-                          brandcolor = '${input.brandcolor}',
-                          logo = '${filename}',
-                          updated_at = '${getCurrentTime()}',
-                          address_line1 = '${input.address_line1}',
-                          address_line2 = '${input.address_line2}',
-                          postal_code = '${input.postal_code}',
-                          city = '${input.city}',
-                          state = '${input.state}'
-                          WHERE users.id = ?`,
-          [id]
+        const [rows_update, fields_update] = await connectPool.query(
+          `UPDATE users 
+         SET 
+           username = ?, 
+           phone = ?, 
+           logo = ?, 
+           updated_at = ?
+         WHERE id = ?`,
+          [input.username, input.phone, filename, getCurrentTime(), id]
         );
 
         if (filename !== rows_user[0].logo) {
           await unlinkFiles(`${process.env.UPLOAD_DIR}/${rows_user[0].logo}`);
         }
-        input.id = id;
-        input.parent = rows_user[0].parent;
-        await upsertUsers(input);
-        const [user, fields_user] = await connectPool.query(
-          `SELECT id,phone,logo,address_line1 FROM users WHERE id = ?`,
-          [id]
-        );
 
-        if (user[0]?.phone && user[0]?.address_line1) {
-          const [data_Finishsetup, fields_data_Finishsetup] =
-            await connectPool.query(
-              `SELECT a.*, b.setup_module_name FROM finishSetup_by_user AS a LEFT JOIN finishSetupDataModel AS b ON a.finish_setup_id = b.id WHERE 
-                                  b.setup_module_name = 'Update your profile' AND a.user_id = ?`,
-              [id]
-            );
-
-          const [update_Finishsetup, fields_Finishsetup] =
-            await connectPool.query(
-              `  UPDATE finishSetup_by_user 
-                            SET 
-                            isSetupComplete = 1
-                            WHERE id = ? AND user_id = ?`,
-              [data_Finishsetup[0]?.id, id]
-            );
-          console.log("data_Finishsetup[0]?.id", data_Finishsetup[0]?.id, id);
-        }
-        return rows;
-        // }
-        // return checkPhone;
+        return rows_update;
       }
-
-      // return rows_user;
-    } catch (e) {
-      console.log(e);
-      throw new Error(e);
+    } catch (error) {
+      console.error(error);
+      throw error;
     }
   }
 
-  // Update user password by user id.
-  async changePassword(id, input) {
+  async changePassword(user, input) {
     try {
+      const user_id = user.id;
       const [rows_user, fields] = await connectPool.query(
-        `SELECT id,access_key_send, password from users WHERE id = ? LIMIT 1`,
-        [id]
+        `SELECT id, password from users WHERE id = ? LIMIT 1`,
+        [user_id]
       );
+
       if (rows_user.length === 1) {
-        const sql_update = rows_user[0].access_key_send
-          ? "access_key_send = 0,"
-          : "";
-        const checkPassword = await bcrypt.compare(
-          input.currentpassword,
+        const checkPassword = await bcriptjs.compare(
+          input.currentPassword,
           rows_user[0].password
         );
 
         if (checkPassword) {
-          const newpassword = await bcrypt.hash(input.newpassword, 8);
+          const newpassword = await bcriptjs.hash(input.newPassword, 8);
           const [rows, fields] = await connectPool.query(
             `UPDATE users SET 
-                password = '${newpassword}',
-                ${sql_update} 
-                updated_at = '${getCurrentTime()}'              
-                WHERE users.id = ?`,
-            [id]
+                password = ?,
+                updated_at = ?              
+                WHERE id = ?`,
+            [newpassword, getCurrentTime(), user_id]
           );
+
+          let data = { checkPassword };
+          return data;
+        } else {
+          throw new Error("Current password is incorrect");
         }
-        let data = { checkPassword };
-        return data;
+      } else {
+        throw new Error("User not found");
       }
-      return rows_user;
     } catch (e) {
-      console.log(e);
-      throw new Error(e);
+      console.error(e);
+      throw new Error(e.message);
     }
   }
 
-  // Update Subuser active/deactive status.
   async updateUserStatus(req) {
     try {
       let input = req.body;
